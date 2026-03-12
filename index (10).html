@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InfirmiPro — Comptabilité IDEL</title>
+<meta name="description" content="Application comptable pour infirmières libérales remplaçantes">
+<meta name="theme-color" content="#2d6a4f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="InfirmiPro">
+<link rel="manifest" href="data:application/json,{
+  &quot;name&quot;:&quot;InfirmiPro — Comptabilité IDEL&quot;,
+  &quot;short_name&quot;:&quot;InfirmiPro&quot;,
+  &quot;description&quot;:&quot;Comptabilité pour infirmières libérales&quot;,
+  &quot;start_url&quot;:&quot;/&quot;,
+  &quot;display&quot;:&quot;standalone&quot;,
+  &quot;background_color&quot;:&quot;#f5f2ee&quot;,
+  &quot;theme_color&quot;:&quot;#2d6a4f&quot;,
+  &quot;icons&quot;:[{&quot;src&quot;:&quot;https://api.dicebear.com/7.x/initials/svg?seed=IP&amp;backgroundColor=2d6a4f&amp;fontSize=40&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]
+}">
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      const sw = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => self.clients.claim());
+        self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+      `;
+      const blob = new Blob([sw], {type: 'application/javascript'});
+      navigator.serviceWorker.register(URL.createObjectURL(blob));
+    });
+  }
+  // Bouton installation PWA
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('pwa-install-btn')?.style.setProperty('display', 'flex');
+  });
+  function installPWA() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => {
+        deferredPrompt = null;
+        document.getElementById('pwa-install-btn')?.style.setProperty('display', 'none');
+      });
+    }
+  }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1f17;
+    --bg2: #162a1e;
+    --card: rgba(255,255,255,0.06);
+    --card-solid: #1a3326;
+    --accent: #52b788;
+    --accent2: #95d5b2;
+    --accent3: #1b4332;
+    --text: #e8f5ee;
+    --muted: #7aad90;
+    --border: rgba(82,183,136,0.15);
+    --danger: #ff6b6b;
+    --warn: #ffd166;
+    --shadow: 0 8px 32px rgba(0,0,0,0.4);
+    --shadow-hover: 0 16px 48px rgba(0,0,0,0.5);
+    --radius: 20px;
+    --sidebar-w: 220px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 20% 20%, rgba(82,183,136,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 80%, rgba(27,67,50,0.3) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* Animations */
+  @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .section.active { animation: fadeUp 0.3s ease; }
+
+  /* HEADER */
+  header {
+    background: rgba(15,31,23,0.95);
+    backdrop-filter: blur(20px);
+    color: white;
+    padding: 0 1.5rem 0 calc(var(--sidebar-w) + 1.5rem);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; letter-spacing: 0.02em; color: var(--text); }
+  .logo span { color: var(--accent); }
+  .year-badge {
+    background: rgba(82,183,136,0.15);
+    color: var(--accent2);
+    border-radius: 20px; padding: 5px 16px; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); outline: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* SIDEBAR NAV */
+  nav {
+    position: fixed; top: 60px; left: 0;
+    width: var(--sidebar-w);
+    height: calc(100vh - 60px);
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 0.8rem;
+    display: flex; flex-direction: column; gap: 4px;
+    overflow-y: auto; z-index: 90;
+  }
+  nav button {
+    background: none; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500;
+    color: var(--muted); padding: 10px 14px; border-radius: 12px;
+    white-space: nowrap; transition: all 0.2s; text-align: left;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: none;
+  }
+  nav button.active {
+    color: var(--accent);
+    background: rgba(82,183,136,0.12);
+    font-weight: 600;
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  nav button:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.05); }
+
+  /* MAIN */
+  main { margin-left: var(--sidebar-w); padding: 2rem 1.5rem; position: relative; z-index: 1; flex: 1; }
+
+  /* SECTIONS */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .kpi-card {
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.6rem;
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .kpi-card:hover { transform: translateY(-3px); border-color: rgba(82,183,136,0.4); box-shadow: var(--shadow); }
+  .kpi-card.danger::before { background: linear-gradient(90deg, var(--danger), #ff9a9a); }
+  .kpi-card.warn::before { background: linear-gradient(90deg, var(--warn), #ffe08a); }
+  .kpi-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+  .kpi-value { font-size: 1.9rem; font-weight: 700; color: var(--accent2); }
+  .kpi-card.danger .kpi-value { color: var(--danger); }
+  .kpi-card.warn .kpi-value { color: var(--warn); }
+  .kpi-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+  /* FORM CARD */
+  .form-card {
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    border-radius: var(--radius);
+    padding: 1.8rem;
+    border: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+    transition: border-color 0.2s;
+  }
+  .form-card:hover { border-color: rgba(82,183,136,0.3); }
+  .form-card h3 { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin-bottom: 1.2rem; color: var(--accent2); }
+  .form-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: flex-end; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+  label { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+  input, select, textarea {
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem; background: rgba(0,0,0,0.2); color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); background: rgba(0,0,0,0.3); box-shadow: 0 0 0 3px rgba(82,183,136,0.15); }
+  textarea { resize: vertical; min-height: 70px; }
+  select option { background: #1a3326; color: var(--text); }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 22px; border-radius: 10px; border: none;
+    font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-primary { background: linear-gradient(135deg, #52b788, #40916c); color: white; box-shadow: 0 4px 16px rgba(82,183,136,0.3); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(82,183,136,0.4); }
+  .btn-danger { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid rgba(255,107,107,0.3); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+  .btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-outline:hover { background: var(--accent); color: var(--bg); }
+  .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--border); background: var(--card); backdrop-filter: blur(10px); }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: rgba(82,183,136,0.1); color: var(--accent2); padding: 11px 14px; font-size: 0.82rem; text-align: left; font-weight: 600; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 14px; font-size: 0.88rem; border-bottom: 1px solid rgba(82,183,136,0.07); color: var(--text); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(82,183,136,0.05); }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .tag-green { background: rgba(82,183,136,0.2); color: var(--accent2); }
+  .tag-red { background: rgba(255,107,107,0.2); color: var(--danger); }
+  .tag-orange { background: rgba(255,209,102,0.2); color: var(--warn); }
+
+  /* PROGRESS BAR */
+  .progress-wrap { background: rgba(255,255,255,0.1); border-radius: 99px; height: 8px; margin-top: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.8s cubic-bezier(.4,0,.2,1); }
+
+  /* 2035 SECTION */
+  .declaration-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .decl-block { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; backdrop-filter: blur(10px); }
+  .decl-block h4 { font-family: 'Playfair Display', serif; color: var(--accent2); margin-bottom: 1rem; font-size: 1rem; }
+  .decl-line { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(82,183,136,0.07); font-size: 0.88rem; }
+  .decl-line:last-child { border-bottom: none; }
+  .decl-total { background: linear-gradient(135deg, rgba(82,183,136,0.15), rgba(82,183,136,0.05)); border: 1px solid var(--accent); border-radius: var(--radius); padding: 1.5rem 2rem; }
+  .decl-total .label { font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
+  .decl-total .value { font-size: 2.2rem; font-weight: 700; color: var(--accent2); }
+
+  /* SECTION TITLE */
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--text); margin-bottom: 1.5rem; }
+
+  /* INFO BANNER */
+  .info-banner { background: rgba(82,183,136,0.1); border: 1px solid rgba(82,183,136,0.2); border-radius: 12px; padding: 12px 18px; font-size: 0.85rem; color: var(--accent2); margin-bottom: 1.5rem; display: flex; gap: 10px; align-items: center; }
+
+  /* SPINNER */
+  .loading-spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; }
+
+  /* PRINT */
+  @media print {
+    header, nav, .btn, .form-card, .month-row { display: none !important; }
+    body { background: white; color: black; }
+    .section { display: block !important; }
+    .section:not(#section-2035) { display: none !important; }
+  }
+
+  /* RESPONSIVE MOBILE */
+  @media (max-width: 700px) {
+    .declaration-grid { grid-template-columns: 1fr; }
+    :root { --sidebar-w: 0px; }
+    nav {
+      position: fixed; bottom: 0; top: auto; left: 0; right: 0;
+      width: 100%; height: 64px;
+      flex-direction: row; padding: 0;
+      border-right: none; border-top: 1px solid var(--border);
+      justify-content: space-around; gap: 0;
+      overflow-x: auto;
+    }
+    nav button { flex-direction: column; font-size: 0.65rem; padding: 6px 10px; gap: 2px; border-radius: 0; box-shadow: none !important; align-items: center; }
+    nav button.active { box-shadow: none !important; border-top: 2px solid var(--accent); }
+    header { padding: 0 1rem; }
+    main { margin-left: 0; padding: 1rem 0.8rem; padding-bottom: 80px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+    .kpi-value { font-size: 1.4rem; }
+    .form-row { flex-direction: column; }
+    .btn { width: 100%; }
+    .btn-sm { width: auto; }
+  }
+</style>
+
+  /* HEADER */
+  header {
+    background: linear-gradient(135deg, #1e4d38 0%, #2d6a4f 60%, #40916c 100%);
+    color: white;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    box-shadow: 0 4px 24px rgba(45,106,79,0.25);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; letter-spacing: 0.02em; }
+  .logo span { color: #95d5b2; }
+  .logo em { font-style: italic; opacity: 0.8; font-size: 0.8rem; font-family: 'DM Sans', sans-serif; }
+  .year-badge { background: rgba(255,255,255,0.2); color: white; border-radius: 20px; padding: 4px 16px; font-size: 0.9rem; font-weight: 600; cursor: pointer; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); }
+
+  /* NAV TABS */
+  nav {
+    display: flex;
+    gap: 0;
+    background: var(--card);
+    border-bottom: 2px solid var(--border);
+    padding: 0 2rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  nav::-webkit-scrollbar { display: none; }
+  nav button {
+    background: none; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 0.92rem; font-weight: 500;
+    color: var(--muted); padding: 14px 18px; border-bottom: 3px solid transparent;
+    white-space: nowrap; transition: all 0.2s; position: relative;
+  }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  nav button:hover { color: var(--accent); background: rgba(45,106,79,0.04); border-radius: 8px 8px 0 0; }
+
+  /* MAIN */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* SECTIONS */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* CARDS GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 2rem; }
+  .kpi-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 1.4rem 1.6rem;
+    box-shadow: var(--shadow);
+    border-left: 5px solid var(--accent2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 80px; height: 80px;
+    background: var(--accent3);
+    border-radius: 50%;
+    opacity: 0.15;
+  }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+  .kpi-card.danger { border-left-color: var(--danger); }
+  .kpi-card.warn { border-left-color: var(--warn); }
+  .kpi-label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .kpi-value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+  .kpi-card.danger .kpi-value { color: var(--danger); }
+  .kpi-card.warn .kpi-value { color: var(--warn); }
+  .kpi-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+  /* FORM CARD */
+  .form-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 1.8rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(229,224,216,0.6);
+    transition: box-shadow 0.2s;
+  }
+  .form-card:hover { box-shadow: var(--shadow-hover); }
+  .form-card h3 { font-family: 'Playfair Display', serif; font-size: 1.15rem; margin-bottom: 1.2rem; color: var(--accent); }
+  .form-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: flex-end; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+  label { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+  input, select, textarea {
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 0.92rem; background: #fafaf8; color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent2); background: white; box-shadow: 0 0 0 3px rgba(82,183,136,0.15); }
+  textarea { resize: vertical; min-height: 70px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 10px 22px; border-radius: 10px; border: none;
+    font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em;
+  }
+  .btn-primary { background: linear-gradient(135deg, #2d6a4f, #40916c); color: white; box-shadow: 0 4px 12px rgba(45,106,79,0.3); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(45,106,79,0.4); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-danger { background: #fee2e2; color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+  .btn-outline { background: white; color: var(--accent); border: 2px solid var(--accent); }
+  .btn-outline:hover { background: var(--accent); color: white; transform: translateY(-1px); }
+  .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 12px; box-shadow: var(--shadow); background: white; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: var(--accent); color: white; padding: 11px 14px; font-size: 0.82rem; text-align: left; font-weight: 600; }
+  td { padding: 10px 14px; font-size: 0.88rem; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f0faf5; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .tag-green { background: #d1fae5; color: #065f46; }
+  .tag-red { background: #fee2e2; color: #991b1b; }
+  .tag-orange { background: #fef3c7; color: #92400e; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { background: var(--border); border-radius: 99px; height: 10px; margin-top: 6px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width 0.6s ease; }
+
+  /* 2035 SECTION */
+  .declaration-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 700px) { .declaration-grid { grid-template-columns: 1fr; } }
+
+  /* ===== RESPONSIVE MOBILE ===== */
+  @media (max-width: 600px) {
+    /* Header */
+    header { padding: 0 1rem; height: 56px; }
+    .logo { font-size: 1.1rem; }
+    .logo span:last-child { display: none; }
+
+    /* Nav — icônes uniquement sur mobile */
+    nav { padding: 0; overflow-x: auto; scrollbar-width: none; }
+    nav::-webkit-scrollbar { display: none; }
+    nav button { padding: 10px 12px; font-size: 0.78rem; }
+
+    /* Main */
+    main { padding: 1rem 0.8rem; }
+
+    /* KPI grid — 2 colonnes sur mobile */
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.2rem; }
+    .kpi-value { font-size: 1.4rem; }
+    .kpi-card { padding: 1rem 1rem; }
+
+    /* Form cards */
+    .form-card { padding: 1.2rem; }
+    .form-row { flex-direction: column; gap: 0.7rem; }
+    .form-group { min-width: unset; width: 100%; }
+
+    /* Buttons pleine largeur */
+    .btn { width: 100%; text-align: center; padding: 12px; font-size: 0.95rem; }
+    .btn-sm { width: auto; padding: 8px 14px; font-size: 0.82rem; }
+
+    /* Tables scrollables */
+    .table-wrap { font-size: 0.8rem; }
+    th, td { padding: 8px 10px; }
+
+    /* Cacher colonnes moins importantes sur mobile */
+    table th:nth-child(3), table td:nth-child(3) { display: none; }
+
+    /* Chatbot plein écran sur mobile */
+    #chat_window {
+      width: 100vw !important;
+      height: 70vh !important;
+      bottom: 70px !important;
+      right: 0 !important;
+      border-radius: 16px 16px 0 0 !important;
+    }
+
+    /* Scanner tickets */
+    .scan-preview img { max-height: 200px; }
+
+    /* Graphique */
+    canvas { max-height: 220px; }
+
+    /* Espacements */
+    h2 { font-size: 1.3rem; }
+    .form-card h3 { font-size: 1rem; }
+  }
+
+  /* Très petits écrans */
+  @media (max-width: 380px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+    nav button { padding: 8px 10px; font-size: 0.72rem; }
+  }
+  .decl-block { background: var(--card); border-radius: 14px; padding: 1.4rem; box-shadow: var(--shadow); }
+  .decl-block h4 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .decl-line { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--border); }
+  .decl-line:last-child { border-bottom: none; font-weight: 700; color: var(--accent); }
+  .decl-line span:first-child { font-size: 0.85rem; color: var(--text); }
+  .decl-line span:last-child { font-size: 0.92rem; font-weight: 600; }
+  .decl-total { background: #d1fae5; border-radius: 10px; padding: 1rem 1.4rem; margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; }
+  .decl-total .label { font-size: 0.9rem; font-weight: 600; color: #065f46; }
+  .decl-total .value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+
+  /* CHART BAR */
+  .chart-container { background: var(--card); border-radius: 16px; padding: 1.6rem; box-shadow: var(--shadow); margin-bottom: 1.5rem; }
+  .chart-title { font-family: 'Playfair Display', serif; font-size: 1rem; margin-bottom: 1.2rem; color: var(--accent); }
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 160px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { width: 100%; border-radius: 6px 6px 0 0; background: var(--accent2); transition: height 0.5s ease; min-height: 4px; cursor: pointer; position: relative; }
+  .bar.expense { background: #fca5a5; }
+  .bar:hover { filter: brightness(1.1); }
+  .bar-label { font-size: 0.68rem; color: var(--muted); text-align: center; }
+  .bar-val { font-size: 0.68rem; font-weight: 600; color: var(--accent); }
+  .bar.expense + .bar-val { color: var(--danger); }
+  .chart-legend { display: flex; gap: 1.2rem; margin-top: 0.8rem; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* MONTH SELECTOR */
+  .month-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .month-btn { padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: white; font-size: 0.8rem; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .month-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .month-btn:hover { border-color: var(--accent2); }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 3rem 1rem; color: var(--muted); }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 0.8rem; }
+
+  /* NOTIFICATION */
+  .notif { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--accent); color: white; padding: 12px 20px; border-radius: 12px; font-size: 0.88rem; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.15); transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 999; }
+  .notif.show { transform: translateY(0); opacity: 1; }
+
+  /* AUTOCOMPLETE */
+  .suggest-box {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+    background: white; border: 1.5px solid var(--accent2); border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 200px; overflow-y: auto;
+  }
+  .suggest-item {
+    padding: 9px 14px; font-size: 0.85rem; cursor: pointer; border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  .suggest-item:last-child { border-bottom: none; }
+  .suggest-item:hover { background: #f0faf5; }
+  .dist-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: #d1fae5; color: #065f46; border-radius: 20px;
+    padding: 6px 14px; font-size: 0.88rem; font-weight: 600; margin-top: 4px;
+  }
+  .loading-spin {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid var(--accent3); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PRINT */
+  @media print {
+    header, nav, .btn, .form-card, .month-row { display: none !important; }
+    .section { display: block !important; }
+    .section:not(#section-2035) { display: none !important; }
+  }
+
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--accent); margin-bottom: 1.5rem; }
+
+  .info-banner { background: #d1fae5; border-radius: 12px; padding: 12px 18px; font-size: 0.85rem; color: #065f46; margin-bottom: 1.5rem; display: flex; gap: 10px; align-items: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Infirmi<span>Pro</span> <span style="font-size:0.8rem;opacity:0.7;font-family:'DM Sans',sans-serif;">· Comptabilité IDEL</span></div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button id="pwa-install-btn" onclick="installPWA()" style="display:none;align-items:center;gap:6px;background:var(--accent2);color:white;border:none;border-radius:20px;padding:6px 14px;font-size:0.8rem;cursor:pointer;font-family:'DM Sans',sans-serif;">📲 Installer l'app</button>
+    <select id="yearSelect" class="year-badge" style="font-family:'DM Sans',sans-serif;border:none;cursor:pointer;" onchange="changeYear(this.value)">
+      <option value="2024">2024</option>
+      <option value="2025" selected>2025</option>
+      <option value="2026">2026</option>
+    </select>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="showSection('dashboard')">📊 Tableau de bord</button>
+  <button onclick="showSection('recettes')">💶 Recettes</button>
+  <button onclick="showSection('charges')">🧾 Charges</button>
+  <button onclick="showSection('kilometrage')">🚗 Kilométrage</button>
+  <button onclick="showSection('section-2035')">📋 Déclaration 2035</button>
+  <button onclick="showSection('section-fiscal')">🧮 Simulateur Fiscal</button>
+</nav>
+
+<main>
+
+<!-- ===== DASHBOARD ===== -->
+<section id="dashboard" class="section active">
+  <div class="info-banner">💡 Toutes vos données sont sauvegardées dans votre navigateur — aucune donnée n'est envoyée sur internet.</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="chart-container">
+    <div class="chart-title">Recettes vs Charges — par mois</div>
+    <div class="bar-chart" id="barChart"></div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div> Recettes</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fca5a5"></div> Charges</div>
+    </div>
+  </div>
+  <div class="form-card">
+    <h3>📅 Récapitulatif mensuel</h3>
+    <div class="table-wrap" id="dashTable"></div>
+  </div>
+</section>
+
+<!-- ===== RECETTES ===== -->
+<section id="recettes" class="section">
+  <div class="section-title">💶 Saisie des recettes</div>
+  <div class="form-card">
+    <h3>Ajouter une recette</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="r_date">
+      </div>
+      <div class="form-group">
+        <label>Montant (€)</label>
+        <input type="number" id="r_montant" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Remplacé(e)</label>
+        <input type="text" id="r_remplace" placeholder="Dr. Martin">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="r_type">
+          <option>Remplacement CPAM</option>
+          <option>Remplacement hors-convention</option>
+          <option>Astreinte</option>
+          <option>Restauration (repas déplacement)</option>
+                    <option>Autre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Note (optionnel)</label>
+        <input type="text" id="r_note" placeholder="ex: semaine du 5 au 10 mai">
+      </div>
+      <button class="btn btn-primary" onclick="addRecette()">+ Ajouter</button>
+    </div>
+  </div>
+  <div class="month-row" id="monthRowRecettes"></div>
+  <div class="table-wrap" id="recettesTable"></div>
+</section>
+
+<!-- ===== CHARGES ===== -->
+<section id="charges" class="section">
+  <div class="section-title">🧾 Saisie des charges</div>
+
+  <!-- OCR TICKET SCANNER -->
+  <div class="form-card" style="border:2px dashed var(--accent2);background:linear-gradient(135deg,#f0faf5,#ffffff);">
+    <h3 style="display:flex;align-items:center;gap:10px;">📸 Scanner un ticket <span style="font-size:0.72rem;background:var(--accent2);color:white;padding:2px 10px;border-radius:20px;font-family:'DM Sans',sans-serif;font-weight:500;">100% GRATUIT</span></h3>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem;">Importez une photo de votre ticket — le texte est lu automatiquement dans votre navigateur, aucune donnée envoyée sur internet.</p>
+
+    <div id="drop_zone" onclick="document.getElementById('ticket_input').click()"
+      style="border:2px dashed var(--accent2);border-radius:14px;padding:2rem;text-align:center;cursor:pointer;transition:background 0.2s;background:white;"
+      onmouseover="this.style.background='#f0faf5'" onmouseout="this.style.background='white'"
+      ondrop="handleDrop(event)" ondragover="event.preventDefault()">
+      <div style="font-size:2.5rem;margin-bottom:0.5rem;">📸</div>
+      <div style="font-weight:600;color:var(--accent);margin-bottom:4px;">Cliquez ou glissez vos tickets ici</div>
+      <div style="font-size:0.8rem;color:var(--muted);">JPG, PNG — plusieurs tickets à la fois acceptés</div>
+    </div>
+    <input type="file" id="ticket_input" accept="image/*" multiple style="display:none" onchange="scanTickets(this)">
+
+    <div id="scan_preview" style="display:none;margin-top:1rem;">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+        <button onclick="annulerScan()" style="background:none;border:none;cursor:pointer;font-size:0.82rem;color:var(--muted);text-decoration:underline;">✕ Annuler et recommencer</button>
+      </div>
+      <div style="display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;">
+        <img id="ticket_img" style="max-width:160px;max-height:200px;border-radius:10px;box-shadow:var(--shadow);">
+        <div style="flex:1;min-width:200px;">
+          <div id="scan_status" style="margin-bottom:0.8rem;"></div>
+          <div id="scan_result" style="display:none;">
+            <div style="background:#f0faf5;border-radius:10px;padding:1rem;font-size:0.88rem;">
+              <div style="font-weight:600;color:var(--accent);margin-bottom:8px;">✅ Ticket lu — vérifiez et corrigez si besoin :</div>
+              <div class="form-row" style="margin-bottom:0.5rem;">
+                <div class="form-group"><label>Date détectée</label><input type="date" id="ai_date"></div>
+                <div class="form-group"><label>Montant TTC (€)</label><input type="number" id="ai_montant" step="0.01" min="0" oninput="recalcHT()"></div>
+              </div>
+              <div class="form-row" style="margin-bottom:0.5rem;">
+                <div class="form-group">
+                  <label>TVA détectée (€)</label>
+                  <input type="number" id="ai_tva" step="0.01" min="0" placeholder="0.00" oninput="recalcHT()" style="background:#fffbea;">
+                </div>
+                <div class="form-group">
+                  <label>Montant HT (€)</label>
+                  <input type="number" id="ai_ht" step="0.01" min="0" placeholder="calculé auto" readonly style="background:#f5f5f5;color:var(--muted);">
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom:0.5rem;">
+                <div class="form-group">
+                  <label>Catégorie</label>
+                  <select id="ai_cat">
+                    <option>Cotisations URSSAF</option>
+                    <option>Cotisations CARMF / CARCDSF</option>
+                    <option>Frais de déplacement</option>
+                    <option>Matériel médical</option>
+                    <option>Fournitures & consommables</option>
+                    <option>Téléphone / internet</option>
+                    <option>Formation continue</option>
+                    <option>Assurance RCP</option>
+                    <option>Comptabilité / logiciel</option>
+                    <option>Restauration (repas déplacement)</option>
+                    <option>Autre</option>
+                  </select>
+                </div>
+                <div class="form-group"><label>Description</label><input type="text" id="ai_desc" placeholder="Ex: Achat seringues"></div>
+              </div>
+              <div id="ai_tva_info" style="font-size:0.82rem;border-radius:8px;padding:8px 12px;margin-bottom:0.8rem;background:#f0faf5;color:var(--accent);"></div>
+              <button class="btn btn-primary" onclick="validerScan()" style="width:100%;">✅ Enregistrer cette charge</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <h3>Ajouter une charge manuellement</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="c_date">
+      </div>
+      <div class="form-group">
+        <label>Montant (€)</label>
+        <input type="number" id="c_montant" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label>Catégorie</label>
+        <select id="c_cat">
+          <option>Cotisations URSSAF</option>
+          <option>Cotisations CARMF / CARCDSF</option>
+          <option>Frais de déplacement</option>
+          <option>Matériel médical</option>
+          <option>Fournitures & consommables</option>
+          <option>Téléphone / internet</option>
+          <option>Formation continue</option>
+          <option>Assurance RCP</option>
+          <option>Comptabilité / logiciel</option>
+          <option>Restauration (repas déplacement)</option>
+                    <option>Autre</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="c_desc" placeholder="ex: URSSAF T1 2025">
+      </div>
+      <div class="form-group" style="min-width:120px; max-width:120px;">
+        <label>Justificatif</label>
+        <select id="c_just">
+          <option>Oui</option>
+          <option>Non</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="addCharge()">+ Ajouter</button>
+    </div>
+  </div>
+  <div class="month-row" id="monthRowCharges"></div>
+  <div class="table-wrap" id="chargesTable"></div>
+</section>
+
+<!-- ===== KILOMÉTRAGE ===== -->
+<section id="kilometrage" class="section">
+  <div class="section-title">🚗 Suivi kilométrique</div>
+  <div class="info-banner">🗺️ Calcul automatique de distance via <strong>OpenStreetMap</strong> — vos adresses restent privées, aucune donnée envoyée à Google.</div>
+  <div class="form-card">
+    <h3>Paramètres véhicule</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Puissance fiscale</label>
+        <select id="cv_select" onchange="saveSettings()">
+          <option value="3cv">3 CV et moins</option>
+          <option value="4cv">4 CV</option>
+          <option value="5cv" selected>5 CV</option>
+          <option value="6cv">6 CV</option>
+          <option value="7cv">7 CV et plus</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Immatriculation</label>
+        <input type="text" id="immat" placeholder="AB-123-CD" onchange="saveSettings()">
+      </div>
+      <div class="form-group">
+        <label>Véhicule</label>
+        <input type="text" id="vehicule" placeholder="Renault Clio" onchange="saveSettings()">
+      </div>
+    </div>
+    <div id="bareme_info" style="font-size:0.82rem;color:var(--muted);margin-top:4px;"></div>
+  </div>
+  <div class="form-card">
+    <h3>🔍 Recherche d'itinéraire</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;overflow:visible;">
+      <div style="position:relative;overflow:visible;">
+        <label style="font-size:0.78rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;">📍 Adresse de départ</label>
+        <input type="text" id="k_depart" placeholder="Tapez votre adresse de départ..." oninput="rechercheAdresse('k_depart','suggest_depart')" autocomplete="off"
+          style="width:100%;padding:14px 16px;border:2px solid var(--accent2);border-radius:12px;font-size:1rem;font-family:'DM Sans',sans-serif;background:white;outline:none;">
+        <div id="suggest_depart" class="suggest-box" style="position:absolute;top:100%;left:0;right:0;z-index:9999;background:white;border:2px solid var(--accent2);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);max-height:220px;overflow-y:auto;margin-top:2px;"></div>
+      </div>
+      <div style="position:relative;overflow:visible;">
+        <label style="font-size:0.78rem;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;">🏥 Adresse d'arrivée</label>
+        <input type="text" id="k_arrivee" placeholder="Tapez l'adresse d'arrivée..." oninput="rechercheAdresse('k_arrivee','suggest_arrivee')" autocomplete="off"
+          style="width:100%;padding:14px 16px;border:2px solid var(--accent2);border-radius:12px;font-size:1rem;font-family:'DM Sans',sans-serif;background:white;outline:none;">
+        <div id="suggest_arrivee" class="suggest-box" style="position:absolute;top:100%;left:0;right:0;z-index:9999;background:white;border:2px solid var(--accent2);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.18);max-height:220px;overflow-y:auto;margin-top:2px;"></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:1rem;">
+      <button class="btn btn-primary" onclick="calcDistance()" id="btn_calc" style="padding:14px 32px;font-size:1rem;border-radius:12px;">
+        🗺️ Calculer la distance automatiquement
+      </button>
+    </div>
+    <div id="map_preview" style="margin-bottom:1rem;text-align:center;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:1rem;align-items:flex-end;">
+      <div>
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:5px;">Date</label>
+        <input type="date" id="k_date" style="width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:5px;">Km aller simple</label>
+        <input type="number" id="k_km_aller" placeholder="—" min="0" step="0.1" readonly
+          style="width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:9px;background:#f0faf5;font-weight:600;color:var(--accent);font-family:'DM Sans',sans-serif;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:5px;">Km aller-retour</label>
+        <input type="number" id="k_km" placeholder="0" min="0" step="0.1"
+          style="width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;">
+      </div>
+      <div>
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:5px;">Motif</label>
+        <input type="text" id="k_motif" placeholder="Dr. Martin"
+          style="width:100%;padding:9px 13px;border:1.5px solid var(--border);border-radius:9px;font-family:'DM Sans',sans-serif;">
+      </div>
+    </div>
+    <div style="margin-top:1rem;text-align:right;">
+      <button class="btn btn-primary" onclick="addTrajet()">+ Enregistrer le trajet</button>
+    </div>
+  </div>
+  <div class="kpi-grid" id="kpiKm"></div>
+  <div class="month-row" id="monthRowKm"></div>
+  <div class="table-wrap" id="kmTable"></div>
+</section>
+
+<!-- ===== 2035 ===== -->
+<section id="section-2035" class="section">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+    <div class="section-title" style="margin-bottom:0;">📋 Déclaration 2035 — <span id="year2035label">2025</span></div>
+    <button class="btn btn-outline" onclick="window.print()">🖨️ Imprimer</button>
+    <button class="btn btn-primary" onclick="export2035PDF()">📄 Exporter en PDF</button>
+  </div>
+  <div class="declaration-grid" id="decl2035"></div>
+  <div class="decl-total" id="declTotal" style="margin-top:1.5rem;max-width:500px;"></div>
+  <div style="margin-top:1.5rem;padding:1rem 1.4rem;background:#fff3cd;border-radius:12px;font-size:0.82rem;color:#856404;">
+    ⚠️ <strong>Rappel :</strong> Ce récapitulatif est à titre indicatif. Vérifiez les montants avec un expert-comptable avant dépôt officiel.
+  </div>
+</section>
+
+<!-- ===== SIMULATEUR FISCAL ===== -->
+<section id="section-fiscal" class="section">
+  <div class="section-title">🧮 Simulateur Fiscal & Social</div>
+  <div class="info-banner">📌 Estimations basées sur les barèmes officiels 2025. Ajustez votre situation personnelle ci-dessous.</div>
+
+  <div class="form-card">
+    <h3>⚙️ Votre situation personnelle</h3>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Situation familiale</label>
+        <select id="f_famille" onchange="calcFiscal()">
+          <option value="1">Célibataire / Divorcé(e) — 1 part</option>
+          <option value="1.5">Célibataire avec 1 enfant — 1,5 parts</option>
+          <option value="2">Marié(e) / Pacsé(e) sans enfant — 2 parts</option>
+          <option value="2.5">Marié(e) avec 1 enfant — 2,5 parts</option>
+          <option value="3">Marié(e) avec 2 enfants — 3 parts</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Autres revenus du foyer (€/an)</label>
+        <input type="number" id="f_autres_revenus" value="0" min="0" oninput="calcFiscal()" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Année fiscale</label>
+        <select id="f_annee" onchange="calcFiscal()">
+          <option value="2024">2024</option>
+          <option value="2025" selected>2025</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-grid" id="fiscalKpi"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:1.5rem;">
+
+    <div class="form-card">
+      <h3>💼 URSSAF — Cotisations sociales</h3>
+      <div id="urssafDetail"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>🏥 CARPIMKO — Retraite infirmière</h3>
+      <div id="carpimkoDetail"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>🏛️ Impôt sur le revenu</h3>
+      <div id="irDetail"></div>
+    </div>
+
+    <div class="form-card">
+      <h3>📅 Échéancier de paiement</h3>
+      <div id="echeancier"></div>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1.5rem;padding:1rem 1.4rem;background:#fff3cd;border-radius:12px;font-size:0.82rem;color:#856404;">
+    ⚠️ <strong>Rappel :</strong> Ces calculs sont des estimations indicatives. Votre impôt final dépend de votre déclaration complète. Consultez impots.gouv.fr pour votre situation exacte.
+  </div>
+</section>
+
+<div class="notif" id="notif"></div>
+
+<script>
+// ===== STATE =====
+let year = 2025;
+let data = {};
+
+const MOIS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const MOIS_FULL = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+// Barème kilométrique 2025
+const BAREME = {
+  '3cv': { tranches: [[5000, 0.529], [15000, 0.316], [Infinity, 0.370]] },
+  '4cv': { tranches: [[5000, 0.606], [15000, 0.340], [Infinity, 0.407]] },
+  '5cv': { tranches: [[5000, 0.636], [15000, 0.357], [Infinity, 0.427]] },
+  '6cv': { tranches: [[5000, 0.665], [15000, 0.374], [Infinity, 0.447]] },
+  '7cv': { tranches: [[5000, 0.697], [15000, 0.394], [Infinity, 0.470]] },
+};
+
+function calcBareme(km, cv) {
+  const b = BAREME[cv].tranches;
+  if (km <= b[0][0]) return km * b[0][1];
+  if (km <= b[0][0] + b[1][0]) return b[0][0] * b[0][1] + (km - b[0][0]) * b[1][1];
+  return b[0][0] * b[0][1] + b[1][0] * b[1][1] + (km - b[0][0] - b[1][0]) * b[2][1];
+}
+
+function loadData() {
+  try { data = JSON.parse(localStorage.getItem('mc_data') || '{}'); } catch(e) { data = {}; }
+  if (!data[year]) data[year] = { recettes: [], charges: [], trajets: [], settings: { cv: '5cv', immat: '', vehicule: '' }};
+}
+function saveData() { localStorage.setItem('mc_data', JSON.stringify(data)); }
+function getYear() { return data[year] || { recettes: [], charges: [], trajets: [], settings: { cv: '5cv', immat: '', vehicule: '' }}; }
+
+function changeYear(y) {
+  year = parseInt(y);
+  loadData();
+  refresh();
+}
+
+// ===== UI =====
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+  refresh();
+}
+
+function notify(msg) {
+  const n = document.getElementById('notif');
+  n.textContent = msg;
+  n.classList.add('show');
+  setTimeout(() => n.classList.remove('show'), 2500);
+}
+
+function fmt(n) { return parseFloat(n||0).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €'; }
+function fmtN(n) { return parseFloat(n||0).toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+// ===== SETTINGS =====
+function saveSettings() {
+  getYear().settings.cv = document.getElementById('cv_select').value;
+  getYear().settings.immat = document.getElementById('immat').value;
+  getYear().settings.vehicule = document.getElementById('vehicule').value;
+  saveData();
+  updateBaremeInfo();
+  refreshKm();
+}
+function loadSettings() {
+  const s = getYear().settings;
+  document.getElementById('cv_select').value = s.cv || '5cv';
+  document.getElementById('immat').value = s.immat || '';
+  document.getElementById('vehicule').value = s.vehicule || '';
+  updateBaremeInfo();
+}
+function updateBaremeInfo() {
+  const cv = document.getElementById('cv_select').value;
+  const b = BAREME[cv].tranches;
+  document.getElementById('bareme_info').textContent =
+    `Barème ${cv} : jusqu'à 5000 km → ${b[0][1]}€/km | de 5001 à 20000 km → ${b[1][1]}€/km | au-delà → ${b[2][1]}€/km`;
+}
+
+// ===== RECETTES =====
+function addRecette() {
+  const d = document.getElementById('r_date').value;
+  const m = parseFloat(document.getElementById('r_montant').value);
+  if (!d || !m || m <= 0) { notify('⚠️ Remplissez la date et le montant'); return; }
+  getYear().recettes.push({ id: Date.now(), date: d, montant: m,
+    remplace: document.getElementById('r_remplace').value,
+    type: document.getElementById('r_type').value,
+    note: document.getElementById('r_note').value });
+  saveData();
+  ['r_montant','r_remplace','r_note'].forEach(id => document.getElementById(id).value = '');
+  notify('✅ Recette ajoutée !');
+  refreshRecettes();
+  refreshDashboard();
+}
+
+function deleteRecette(id) {
+  getYear().recettes = getYear().recettes.filter(r => r.id !== id);
+  saveData(); refreshRecettes(); refreshDashboard(); notify('🗑️ Supprimé');
+}
+
+let activeMonthR = -1;
+function refreshRecettes() {
+  const recs = getYear().recettes.sort((a,b) => b.date.localeCompare(a.date));
+  const row = document.getElementById('monthRowRecettes');
+  row.innerHTML = '<button class="month-btn '+(activeMonthR===-1?'active':'')+'" onclick="activeMonthR=-1;refreshRecettes()">Tous</button>' +
+    MOIS.map((m,i) => `<button class="month-btn ${activeMonthR===i?'active':''}" onclick="activeMonthR=${i};refreshRecettes()">${m}</button>`).join('');
+  const filtered = activeMonthR === -1 ? recs : recs.filter(r => new Date(r.date).getMonth() === activeMonthR);
+  const total = filtered.reduce((s,r) => s + r.montant, 0);
+  const tbody = filtered.length === 0 ? `<div class="empty"><div class="empty-icon">💶</div><div>Aucune recette saisie</div></div>` :
+    `<table><thead><tr><th>Date</th><th>Montant</th><th>Remplacé(e)</th><th>Type</th><th>Note</th><th></th></tr></thead><tbody>
+    ${filtered.map(r => `<tr>
+      <td>${new Date(r.date).toLocaleDateString('fr-FR')}</td>
+      <td><strong style="color:var(--accent)">${fmt(r.montant)}</strong></td>
+      <td>${r.remplace||'—'}</td>
+      <td><span class="tag tag-green">${r.type}</span></td>
+      <td style="color:var(--muted)">${r.note||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteRecette(${r.id})">✕</button></td>
+    </tr>`).join('')}
+    <tr style="font-weight:700;background:#f0faf5"><td colspan="1" style="color:var(--muted)">Total</td><td style="color:var(--accent)">${fmt(total)}</td><td colspan="4"></td></tr>
+    </tbody></table>`;
+  document.getElementById('recettesTable').innerHTML = tbody;
+}
+
+// ===== CHARGES =====
+function addCharge() {
+  const d = document.getElementById('c_date').value;
+  const m = parseFloat(document.getElementById('c_montant').value);
+  if (!d || !m || m <= 0) { notify('⚠️ Remplissez la date et le montant'); return; }
+  getYear().charges.push({ id: Date.now(), date: d, montant: m,
+    cat: document.getElementById('c_cat').value,
+    desc: document.getElementById('c_desc').value,
+    just: document.getElementById('c_just').value });
+  saveData();
+  ['c_montant','c_desc'].forEach(id => document.getElementById(id).value = '');
+  notify('✅ Charge ajoutée !');
+  refreshCharges(); refreshDashboard();
+}
+
+function deleteCharge(id) {
+  getYear().charges = getYear().charges.filter(c => c.id !== id);
+  saveData(); refreshCharges(); refreshDashboard(); notify('🗑️ Supprimé');
+}
+
+let activeMonthC = -1;
+function refreshCharges() {
+  const chgs = getYear().charges.sort((a,b) => b.date.localeCompare(a.date));
+  const row = document.getElementById('monthRowCharges');
+  row.innerHTML = '<button class="month-btn '+(activeMonthC===-1?'active':'')+'" onclick="activeMonthC=-1;refreshCharges()">Tous</button>' +
+    MOIS.map((m,i) => `<button class="month-btn ${activeMonthC===i?'active':''}" onclick="activeMonthC=${i};refreshCharges()">${m}</button>`).join('');
+  const filtered = activeMonthC === -1 ? chgs : chgs.filter(c => new Date(c.date).getMonth() === activeMonthC);
+  const total = filtered.reduce((s,c) => s + c.montant, 0);
+  const tbody = filtered.length === 0 ? `<div class="empty"><div class="empty-icon">🧾</div><div>Aucune charge saisie</div></div>` :
+    `<table><thead><tr><th>Date</th><th>Montant</th><th>Catégorie</th><th>Description</th><th>Justif.</th><th></th></tr></thead><tbody>
+    ${filtered.map(c => `<tr>
+      <td>${new Date(c.date).toLocaleDateString('fr-FR')}</td>
+      <td><strong style="color:var(--danger)">${fmt(c.montant)}</strong></td>
+      <td><span class="tag tag-orange">${c.cat}</span></td>
+      <td style="color:var(--muted)">${c.desc||'—'}</td>
+      <td><span class="tag ${c.just==='Oui'?'tag-green':'tag-red'}">${c.just}</span></td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteCharge(${c.id})">✕</button></td>
+    </tr>`).join('')}
+    <tr style="font-weight:700;background:#fff5f5"><td colspan="1" style="color:var(--muted)">Total</td><td style="color:var(--danger)">${fmt(total)}</td><td colspan="4"></td></tr>
+    </tbody></table>`;
+  document.getElementById('chargesTable').innerHTML = tbody;
+}
+
+// ===== KILOMÉTRAGE =====
+function addTrajet() {
+  const d = document.getElementById('k_date').value;
+  const km = parseFloat(document.getElementById('k_km').value);
+  if (!d || !km || km <= 0) { notify('⚠️ Remplissez la date et les kilomètres'); return; }
+  getYear().trajets.push({ id: Date.now(), date: d, km,
+    depart: document.getElementById('k_depart').value,
+    arrivee: document.getElementById('k_arrivee').value,
+    motif: document.getElementById('k_motif').value });
+  saveData();
+  ['k_km','k_depart','k_arrivee','k_motif'].forEach(id => document.getElementById(id).value = '');
+  notify('✅ Trajet ajouté !');
+  refreshKm(); refreshDashboard();
+}
+
+function deleteTrajet(id) {
+  getYear().trajets = getYear().trajets.filter(t => t.id !== id);
+  saveData(); refreshKm(); refreshDashboard(); notify('🗑️ Supprimé');
+}
+
+let activeMonthK = -1;
+function refreshKm() {
+  const trajets = getYear().trajets.sort((a,b) => b.date.localeCompare(a.date));
+  const cv = getYear().settings.cv || '5cv';
+  const totalKm = trajets.reduce((s,t) => s + t.km, 0);
+  const indemn = calcBareme(totalKm, cv);
+
+  const row = document.getElementById('monthRowKm');
+  row.innerHTML = '<button class="month-btn '+(activeMonthK===-1?'active':'')+'" onclick="activeMonthK=-1;refreshKm()">Tous</button>' +
+    MOIS.map((m,i) => `<button class="month-btn ${activeMonthK===i?'active':''}" onclick="activeMonthK=${i};refreshKm()">${m}</button>`).join('');
+
+  const kpiKm = document.getElementById('kpiKm');
+  kpiKm.innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Total km ${year}</div><div class="kpi-value">${fmtN(totalKm)} km</div></div>
+    <div class="kpi-card"><div class="kpi-label">Indemnités (barème ${cv})</div><div class="kpi-value">${fmt(indemn)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Nb de trajets</div><div class="kpi-value">${trajets.length}</div></div>
+  `;
+
+  const filtered = activeMonthK === -1 ? trajets : trajets.filter(t => new Date(t.date).getMonth() === activeMonthK);
+  const filteredKm = filtered.reduce((s,t) => s + t.km, 0);
+  const filteredIndemn = calcBareme(filteredKm, cv);
+
+  const tbody = filtered.length === 0 ? `<div class="empty"><div class="empty-icon">🚗</div><div>Aucun trajet saisi</div></div>` :
+    `<table><thead><tr><th>Date</th><th>Départ</th><th>Arrivée</th><th>Km</th><th>Indemnité</th><th>Motif</th><th></th></tr></thead><tbody>
+    ${filtered.map(t => {
+      const ind = calcBareme(t.km, cv);
+      return `<tr>
+        <td>${new Date(t.date).toLocaleDateString('fr-FR')}</td>
+        <td>${t.depart||'—'}</td><td>${t.arrivee||'—'}</td>
+        <td><strong>${fmtN(t.km)} km</strong></td>
+        <td style="color:var(--accent)">${fmt(ind)}</td>
+        <td style="color:var(--muted)">${t.motif||'—'}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteTrajet(${t.id})">✕</button></td>
+      </tr>`;
+    }).join('')}
+    <tr style="font-weight:700;background:#f0faf5"><td colspan="3" style="color:var(--muted)">Total sélection</td><td>${fmtN(filteredKm)} km</td><td style="color:var(--accent)">${fmt(filteredIndemn)}</td><td colspan="2"></td></tr>
+    </tbody></table>`;
+  document.getElementById('kmTable').innerHTML = tbody;
+}
+
+// ===== DASHBOARD =====
+function refreshDashboard() {
+  const yr = getYear();
+  const totalR = yr.recettes.reduce((s,r) => s + r.montant, 0);
+  const totalC = yr.charges.reduce((s,c) => s + c.montant, 0);
+  const totalKm = yr.trajets.reduce((s,t) => s + t.km, 0);
+  const cv = yr.settings.cv || '5cv';
+  const indemKm = calcBareme(totalKm, cv);
+  const totalChargesReelles = totalC + indemKm;
+  const benefice = totalR - totalChargesReelles;
+
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Recettes ${year}</div><div class="kpi-value">${fmt(totalR)}</div><div class="kpi-sub">${yr.recettes.length} entrée(s)</div></div>
+    <div class="kpi-card warn"><div class="kpi-label">Charges ${year}</div><div class="kpi-value">${fmt(totalChargesReelles)}</div><div class="kpi-sub">dont ${fmt(indemKm)} km</div></div>
+    <div class="kpi-card ${benefice<0?'danger':''}"><div class="kpi-label">Bénéfice net</div><div class="kpi-value">${fmt(benefice)}</div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${totalR>0?Math.max(0,Math.min(100,(benefice/totalR)*100)):0}%"></div></div>
+    </div>
+    <div class="kpi-card"><div class="kpi-label">Km parcourus</div><div class="kpi-value">${fmtN(totalKm)} km</div><div class="kpi-sub">${yr.trajets.length} trajet(s)</div></div>
+  `;
+
+  // Bar chart
+  const monthlyR = Array(12).fill(0);
+  const monthlyC = Array(12).fill(0);
+  yr.recettes.forEach(r => { monthlyR[new Date(r.date).getMonth()] += r.montant; });
+  yr.charges.forEach(c => { monthlyC[new Date(c.date).getMonth()] += c.montant; });
+  yr.trajets.forEach(t => { monthlyC[new Date(t.date).getMonth()] += calcBareme(t.km, cv) / yr.trajets.filter(x => new Date(x.date).getMonth() === new Date(t.date).getMonth()).length; });
+
+  const maxVal = Math.max(...monthlyR, ...monthlyC, 1);
+  const chart = document.getElementById('barChart');
+  chart.innerHTML = MOIS.map((m,i) => {
+    const rh = Math.round((monthlyR[i]/maxVal)*140);
+    const ch = Math.round((monthlyC[i]/maxVal)*140);
+    return `<div class="bar-wrap">
+      <div style="display:flex;align-items:flex-end;gap:2px;height:140px;">
+        <div class="bar" style="height:${rh}px;width:12px;" title="${fmt(monthlyR[i])}"></div>
+        <div class="bar expense" style="height:${ch}px;width:12px;" title="${fmt(monthlyC[i])}"></div>
+      </div>
+      <div class="bar-label">${m}</div>
+    </div>`;
+  }).join('');
+
+  // Summary table
+  const rows = MOIS.map((m,i) => {
+    if (monthlyR[i] === 0 && monthlyC[i] === 0) return null;
+    const ben = monthlyR[i] - monthlyC[i];
+    return `<tr>
+      <td>${MOIS_FULL[i]}</td>
+      <td style="color:var(--accent);font-weight:600">${fmt(monthlyR[i])}</td>
+      <td style="color:var(--danger);font-weight:600">${fmt(monthlyC[i])}</td>
+      <td style="color:${ben>=0?'var(--accent)':'var(--danger)'};font-weight:700">${fmt(ben)}</td>
+    </tr>`;
+  }).filter(Boolean);
+
+  document.getElementById('dashTable').innerHTML = rows.length === 0
+    ? `<div class="empty"><div class="empty-icon">📊</div><div>Commencez à saisir vos recettes et charges</div></div>`
+    : `<table><thead><tr><th>Mois</th><th>Recettes</th><th>Charges</th><th>Bénéfice</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+
+// ===== EXPORT PDF 2035 =====
+async function export2035PDF() {
+  const btn = event.target;
+  btn.textContent = '⏳ Génération...';
+  btn.disabled = true;
+
+  // Charger jsPDF dynamiquement
+  if (!window.jspdf) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // Données
+  const yr = getYear();
+  const totalR = yr.recettes.reduce((s,r) => s + r.montant, 0);
+  const totalKm = yr.trajets.reduce((s,t) => s + t.km, 0);
+  const cv = yr.settings.cv || '5cv';
+  const indemKm = calcBareme(totalKm, cv);
+  const bycat = {};
+  yr.charges.forEach(c => { bycat[c.cat] = (bycat[c.cat]||0) + c.montant; });
+  const charges = [
+    ['Cotisations sociales (URSSAF, CARMF)', (bycat['Cotisations URSSAF']||0) + (bycat['Cotisations CARMF / CARCDSF']||0)],
+    ['Frais de déplacement', bycat['Frais de déplacement']||0],
+    ['Frais kilométriques (barème fiscal)', indemKm],
+    ['Matériel médical & consommables', (bycat['Matériel médical']||0) + (bycat['Fournitures & consommables']||0)],
+    ['Téléphone & internet', bycat['Téléphone / internet']||0],
+    ['Formation continue', bycat['Formation continue']||0],
+    ['Assurance RCP', bycat['Assurance RCP']||0],
+    ['Comptabilité & logiciels', bycat['Comptabilité / logiciel']||0],
+    ['Restauration (repas déplacement)', bycat['Restauration (repas déplacement)']||0],
+    ['Autres charges', bycat['Autre']||0],
+  ];
+  const totalCharges = charges.reduce((s,[,v]) => s + v, 0);
+  const benefice = totalR - totalCharges;
+
+  const fmtPDF = v => v.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+  const W = 210, margin = 20;
+
+  // HEADER
+  doc.setFillColor(45, 106, 79);
+  doc.rect(0, 0, W, 35, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.text('InfirmiPro — Déclaration 2035', margin, 15);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Exercice ${year} · Infirmière Libérale Remplaçante · Régime BNC`, margin, 25);
+
+  doc.setTextColor(30, 30, 30);
+  let y = 48;
+
+  // Ligne séparatrice helper
+  const hr = (yy) => { doc.setDrawColor(200,200,200); doc.line(margin, yy, W-margin, yy); };
+
+  // SECTION A — RECETTES
+  doc.setFillColor(240, 250, 245);
+  doc.rect(margin, y-5, W-2*margin, 10, 'F');
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+  doc.setTextColor(45, 106, 79);
+  doc.text('SECTION A — RECETTES', margin+2, y+2);
+  y += 12;
+
+  doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(30,30,30);
+  doc.text('Recettes brutes BNC', margin+4, y);
+  doc.text(fmtPDF(totalR), W-margin, y, {align:'right'});
+  y += 7;
+  hr(y); y += 5;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total recettes', margin+4, y);
+  doc.text(fmtPDF(totalR), W-margin, y, {align:'right'});
+  y += 12;
+
+  // SECTION B — DÉPENSES
+  doc.setFillColor(240, 250, 245);
+  doc.rect(margin, y-5, W-2*margin, 10, 'F');
+  doc.setFontSize(12); doc.setFont('helvetica', 'bold');
+  doc.setTextColor(45, 106, 79);
+  doc.text('SECTION B — DÉPENSES', margin+2, y+2);
+  y += 12;
+
+  doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(30,30,30);
+  charges.forEach(([label, val]) => {
+    if (val > 0) {
+      doc.text(label, margin+4, y);
+      doc.text(fmtPDF(val), W-margin, y, {align:'right'});
+      y += 7;
+    }
+  });
+  hr(y); y += 5;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Total dépenses', margin+4, y);
+  doc.text(fmtPDF(totalCharges), W-margin, y, {align:'right'});
+  y += 15;
+
+  // BÉNÉFICE
+  const benefColor = benefice >= 0 ? [45,106,79] : [185,28,28];
+  doc.setFillColor(...benefColor);
+  doc.rect(margin, y-5, W-2*margin, 14, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold');
+  doc.text('BÉNÉFICE IMPOSABLE (ligne 46)', margin+4, y+4);
+  doc.text(fmtPDF(benefice), W-margin, y+4, {align:'right'});
+  y += 20;
+
+  // Note
+  doc.setTextColor(130,130,130);
+  doc.setFontSize(8); doc.setFont('helvetica', 'italic');
+  doc.text('⚠ Ce document est indicatif. Vérifiez les montants avec un expert-comptable avant dépôt officiel.', margin, y);
+
+  // Footer
+  doc.setFillColor(245,242,238);
+  doc.rect(0, 287, W, 10, 'F');
+  doc.setTextColor(100,100,100);
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+  doc.text(`InfirmiPro · Généré le ${new Date().toLocaleDateString('fr-FR')}`, margin, 293);
+
+  doc.save(`Declaration-2035-${year}.pdf`);
+  btn.textContent = '📄 Exporter en PDF';
+  btn.disabled = false;
+}
+function refresh2035() {
+  const yr = getYear();
+  const totalR = yr.recettes.reduce((s,r) => s + r.montant, 0);
+  const totalKm = yr.trajets.reduce((s,t) => s + t.km, 0);
+  const cv = yr.settings.cv || '5cv';
+  const indemKm = calcBareme(totalKm, cv);
+
+  const bycat = {};
+  yr.charges.forEach(c => { bycat[c.cat] = (bycat[c.cat]||0) + c.montant; });
+
+  const charges = [
+    ['Cotisations sociales (URSSAF, CARMF...)', (bycat['Cotisations URSSAF']||0) + (bycat['Cotisations CARMF / CARCDSF']||0)],
+    ['Frais de déplacement', bycat['Frais de déplacement']||0],
+    ['Frais kilométriques (barème fiscal)', indemKm],
+    ['Matériel médical & consommables', (bycat['Matériel médical']||0) + (bycat['Fournitures & consommables']||0)],
+    ['Téléphone & internet', bycat['Téléphone / internet']||0],
+    ['Formation continue', bycat['Formation continue']||0],
+    ['Assurance RCP', bycat['Assurance RCP']||0],
+    ['Comptabilité & logiciels', bycat['Comptabilité / logiciel']||0],
+    ['Autres charges', bycat['Autre']||0],
+  ];
+  const totalCharges = charges.reduce((s,[,v]) => s + v, 0);
+  const benefice = totalR - totalCharges;
+
+  document.getElementById('year2035label').textContent = year;
+  document.getElementById('decl2035').innerHTML = `
+    <div class="decl-block">
+      <h4>Section A — Recettes</h4>
+      <div class="decl-line"><span>Recettes brutes BNC</span><span style="color:var(--accent)">${fmt(totalR)}</span></div>
+      <div class="decl-line"><span><strong>Total recettes</strong></span><span>${fmt(totalR)}</span></div>
+    </div>
+    <div class="decl-block">
+      <h4>Section B — Dépenses</h4>
+      ${charges.map(([l,v]) => `<div class="decl-line"><span>${l}</span><span>${fmt(v)}</span></div>`).join('')}
+      <div class="decl-line"><span><strong>Total dépenses</strong></span><span>${fmt(totalCharges)}</span></div>
+    </div>
+  `;
+  document.getElementById('declTotal').innerHTML = `
+    <div class="label">💰 Bénéfice imposable (ligne 46)</div>
+    <div class="value">${fmt(benefice)}</div>
+  `;
+}
+
+function refresh() {
+  loadSettings();
+  refreshDashboard();
+  refreshRecettes();
+  refreshCharges();
+  refreshKm();
+  refresh2035();
+  calcFiscal();
+}
+
+// Init dates to today
+function initDates() {
+  const today = new Date().toISOString().split('T')[0];
+  ['r_date','c_date','k_date'].forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = today; });
+}
+
+// ===== OPENSTREETMAP AUTOCOMPLETE =====
+let acTimers = {};
+let selectedCoords = { depart: null, arrivee: null };
+
+function rechercheAdresse(inputId, suggestId) {
+  const val = document.getElementById(inputId).value.trim();
+  const box = document.getElementById(suggestId);
+  if (val.length < 3) {
+    box.innerHTML = val.length > 0 ? '<div class="suggest-item" style="color:var(--muted);cursor:default;">✍️ Continuez à taper...</div>' : '';
+    return;
+  }
+  clearTimeout(acTimers[inputId]);
+  box.innerHTML = '<div class="suggest-item" style="color:var(--muted);">⏳ Recherche...</div>';
+  acTimers[inputId] = setTimeout(function() {
+    const url = 'https://api-adresse.data.gouv.fr/search/?q=' + encodeURIComponent(val) + '&limit=6&autocomplete=1';
+    fetch(url)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        const features = data.features || [];
+        if (!features.length) {
+          box.innerHTML = '<div class="suggest-item" style="color:var(--muted)">Aucun résultat</div>';
+          return;
+        }
+        box.innerHTML = features.map(function(f) {
+          const label = f.properties.label;
+          const lat = f.geometry.coordinates[1];
+          const lon = f.geometry.coordinates[0];
+          return '<div class="suggest-item" onclick="selectAddress(\'' + inputId + '\',\'' + suggestId + '\',' + lat + ',' + lon + ',\'' + label.replace(/'/g,"&apos;") + '\')">📍 ' + label + '</div>';
+        }).join('');
+      })
+      .catch(function(e) {
+        box.innerHTML = '<div class="suggest-item" style="color:var(--danger)">❌ ' + e.message + '</div>';
+      });
+  }, 300);
+}
+
+function selectAddress(inputId, suggestId, lat, lon, label) {
+  document.getElementById(inputId).value = label;
+  document.getElementById(suggestId).innerHTML = '';
+  const key = inputId === 'k_depart' ? 'depart' : 'arrivee';
+  selectedCoords[key] = { lat: parseFloat(lat), lon: parseFloat(lon) };
+}
+
+async function calcDistance() {
+  const btn = document.getElementById('btn_calc');
+  const preview = document.getElementById('map_preview');
+
+  if (!selectedCoords.depart || !selectedCoords.arrivee) {
+    // Try geocoding from text if not selected from dropdown
+    const dep = document.getElementById('k_depart').value.trim();
+    const arr = document.getElementById('k_arrivee').value.trim();
+    if (!dep || !arr) { notify('⚠️ Saisissez les deux adresses'); return; }
+    btn.innerHTML = '<span class="loading-spin"></span> Recherche...';
+    btn.disabled = true;
+    try {
+      const [r1, r2] = await Promise.all([
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dep)}&limit=1&countrycodes=fr`).then(r=>r.json()),
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(arr)}&limit=1&countrycodes=fr`).then(r=>r.json())
+      ]);
+      if (!r1[0] || !r2[0]) { notify('⚠️ Adresse introuvable, essayez plus précis'); btn.innerHTML = '🗺️ Calculer la distance'; btn.disabled=false; return; }
+      selectedCoords.depart = { lat: parseFloat(r1[0].lat), lon: parseFloat(r1[0].lon) };
+      selectedCoords.arrivee = { lat: parseFloat(r2[0].lat), lon: parseFloat(r2[0].lon) };
+    } catch(e) { notify('❌ Erreur réseau'); btn.innerHTML = '🗺️ Calculer la distance'; btn.disabled=false; return; }
+  }
+
+  btn.innerHTML = '<span class="loading-spin"></span> Calcul...';
+  btn.disabled = true;
+  preview.innerHTML = '';
+
+  try {
+    const { lat: lat1, lon: lon1 } = selectedCoords.depart;
+    const { lat: lat2, lon: lon2 } = selectedCoords.arrivee;
+    const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code !== 'Ok') throw new Error('Route introuvable');
+    const km = (data.routes[0].distance / 1000).toFixed(1);
+    const durMin = Math.round(data.routes[0].duration / 60);
+    document.getElementById('k_km_aller').value = km;
+    document.getElementById('k_km').value = (parseFloat(km) * 2).toFixed(1);
+    preview.innerHTML = `<div class="dist-badge">✅ ${km} km (aller) · ~${durMin} min · aller-retour : ${(parseFloat(km)*2).toFixed(1)} km</div>`;
+    notify(`✅ Distance calculée : ${km} km`);
+  } catch(e) {
+    notify('❌ Impossible de calculer l\'itinéraire');
+    preview.innerHTML = `<div style="color:var(--danger);font-size:0.82rem;">Route introuvable — saisissez les km manuellement</div>`;
+  }
+  btn.innerHTML = '🗺️ Calculer la distance';
+  btn.disabled = false;
+}
+
+// Close suggest boxes on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.suggest-box') && !e.target.closest('input')) {
+    document.querySelectorAll('.suggest-box').forEach(b => b.innerHTML = '');
+  }
+});
+
+// ===== SIMULATEUR FISCAL =====
+function calcFiscal() {
+  const yr = getYear();
+  const totalR = yr.recettes.reduce((s,r) => s + r.montant, 0);
+  const totalC = yr.charges.reduce((s,c) => s + c.montant, 0);
+  const totalKm = yr.trajets.reduce((s,t) => s + t.km, 0);
+  const cv = yr.settings.cv || '5cv';
+  const indemKm = calcBareme(totalKm, cv);
+  const benefice = Math.max(0, totalR - totalC - indemKm);
+
+  const parts = parseFloat(document.getElementById('f_famille').value) || 1;
+  const autresRevenus = parseFloat(document.getElementById('f_autres_revenus').value) || 0;
+
+  // ---- URSSAF 2025 (BNC, hors ALD) ----
+  const tauxMaladie = benefice <= 18255 ? 0.0 : benefice <= 27682 ? 0.04 : 0.065;
+  const cotMaladie = benefice * tauxMaladie;
+  const cotMaternitePrev = benefice * 0.006;
+  const cotRetraiteBase = Math.min(benefice, 46368) * 0.1775 + Math.max(0, Math.min(benefice, 231840) - 46368) * 0.0260;
+  const cotInvalidite = benefice * 0.005;
+  const cotAF = benefice <= 48225 ? 0 : benefice <= 73960 ? benefice * 0.0228 : benefice * 0.034;
+  const cotCSGCRDS = benefice * 0.097;
+  const totalURSSAF = cotMaladie + cotMaternitePrev + cotRetraiteBase + cotInvalidite + cotAF + cotCSGCRDS;
+
+  // ---- CARPIMKO 2025 ----
+  const carpRetraiteBase = Math.min(benefice, 46368) * 0.083;
+  const carpRetraiteCompl = benefice * 0.0036;
+  const carpInvalidite = 981; // cotisation forfaitaire 2025
+  const carpDeces = 59; // cotisation forfaitaire 2025
+  const totalCARPIMKO = carpRetraiteBase + carpRetraiteCompl + carpInvalidite + carpDeces;
+
+  // ---- IMPÔT SUR LE REVENU 2025 ----
+  // Abattement 10% frais pro (min 495€, max 14171€)
+  const abattement = Math.min(Math.max(benefice * 0.10, 495), 14171);
+  const revenuNet = benefice - abattement + autresRevenus;
+  const revenuParPart = revenuNet / parts;
+
+  // Barème IR 2025
+  function calcIR(rpp) {
+    let ir = 0;
+    if (rpp <= 11497) ir = 0;
+    else if (rpp <= 29315) ir = (rpp - 11497) * 0.11;
+    else if (rpp <= 83823) ir = (29315 - 11497) * 0.11 + (rpp - 29315) * 0.30;
+    else if (rpp <= 180294) ir = (29315 - 11497) * 0.11 + (83823 - 29315) * 0.30 + (rpp - 83823) * 0.41;
+    else ir = (29315 - 11497) * 0.11 + (83823 - 29315) * 0.30 + (180294 - 83823) * 0.41 + (rpp - 180294) * 0.45;
+    return ir * parts;
+  }
+  const ir = calcIR(revenuParPart);
+  const tauxMoyen = revenuNet > 0 ? (ir / revenuNet * 100) : 0;
+  const tauxMarginal = revenuParPart <= 11497 ? 0 : revenuParPart <= 29315 ? 11 : revenuParPart <= 83823 ? 30 : revenuParPart <= 180294 ? 41 : 45;
+
+  const totalPrelevements = totalURSSAF + totalCARPIMKO + ir;
+  const resteAVivre = benefice - totalPrelevements;
+  const mensuel = resteAVivre / 12;
+
+  // ---- AFFICHAGE KPI ----
+  document.getElementById('fiscalKpi').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Bénéfice BNC</div><div class="kpi-value">${fmt(benefice)}</div></div>
+    <div class="kpi-card warn"><div class="kpi-label">Total prélèvements</div><div class="kpi-value">${fmt(totalPrelevements)}</div></div>
+    <div class="kpi-card ${resteAVivre < 0 ? 'danger' : ''}"><div class="kpi-label">Reste à vivre / an</div><div class="kpi-value">${fmt(resteAVivre)}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Revenu net mensuel</div><div class="kpi-value">${fmt(mensuel)}</div><div class="kpi-sub">estimé</div></div>
+  `;
+
+  // ---- URSSAF DETAIL ----
+  document.getElementById('urssafDetail').innerHTML = `
+    <div class="decl-line"><span>Maladie-maternité</span><span>${fmt(cotMaladie + cotMaternitePrev)}</span></div>
+    <div class="decl-line"><span>Retraite de base</span><span>${fmt(cotRetraiteBase)}</span></div>
+    <div class="decl-line"><span>Invalidité-décès</span><span>${fmt(cotInvalidite)}</span></div>
+    <div class="decl-line"><span>Allocations familiales</span><span>${fmt(cotAF)}</span></div>
+    <div class="decl-line"><span>CSG / CRDS (9,7%)</span><span>${fmt(cotCSGCRDS)}</span></div>
+    <div class="decl-line" style="font-weight:700;color:var(--accent)"><span>TOTAL URSSAF</span><span>${fmt(totalURSSAF)}</span></div>
+    <div style="margin-top:8px;font-size:0.78rem;color:var(--muted)">Trimestriel estimé : ${fmt(totalURSSAF/4)}</div>
+  `;
+
+  // ---- CARPIMKO DETAIL ----
+  document.getElementById('carpimkoDetail').innerHTML = `
+    <div class="decl-line"><span>Retraite de base</span><span>${fmt(carpRetraiteBase)}</span></div>
+    <div class="decl-line"><span>Retraite complémentaire</span><span>${fmt(carpRetraiteCompl)}</span></div>
+    <div class="decl-line"><span>Invalidité (forfait)</span><span>${fmt(carpInvalidite)}</span></div>
+    <div class="decl-line"><span>Décès (forfait)</span><span>${fmt(carpDeces)}</span></div>
+    <div class="decl-line" style="font-weight:700;color:var(--accent)"><span>TOTAL CARPIMKO</span><span>${fmt(totalCARPIMKO)}</span></div>
+    <div style="margin-top:8px;font-size:0.78rem;color:var(--muted)">Mensuel estimé : ${fmt(totalCARPIMKO/12)}</div>
+  `;
+
+  // ---- IR DETAIL ----
+  document.getElementById('irDetail').innerHTML = `
+    <div class="decl-line"><span>Bénéfice BNC</span><span>${fmt(benefice)}</span></div>
+    <div class="decl-line"><span>Abattement frais pro (10%)</span><span>- ${fmt(abattement)}</span></div>
+    <div class="decl-line"><span>Autres revenus foyer</span><span>${fmt(autresRevenus)}</span></div>
+    <div class="decl-line"><span>Revenu imposable net</span><span>${fmt(revenuNet)}</span></div>
+    <div class="decl-line"><span>Quotient familial</span><span>${parts} part(s)</span></div>
+    <div class="decl-line"><span>Taux marginal</span><span>${tauxMarginal}%</span></div>
+    <div class="decl-line"><span>Taux moyen</span><span>${tauxMoyen.toFixed(1)}%</span></div>
+    <div class="decl-line" style="font-weight:700;color:var(--accent)"><span>IMPÔT ESTIMÉ</span><span>${fmt(ir)}</span></div>
+    <div style="margin-top:8px;font-size:0.78rem;color:var(--muted)">Mensualisation : ${fmt(ir/10)}/mois (jan–oct)</div>
+  `;
+
+  // ---- ÉCHÉANCIER ----
+  const urssafT = totalURSSAF / 4;
+  const carpM = totalCARPIMKO / 12;
+  const irM = ir / 10;
+  const echeances = [
+    ['Janvier', fmt(carpM), '—', fmt(irM)],
+    ['Février', fmt(carpM), '—', fmt(irM)],
+    ['Mars', fmt(carpM), '—', fmt(irM)],
+    ['Avril (T1)', fmt(carpM + urssafT), fmt(urssafT), fmt(irM)],
+    ['Mai', fmt(carpM), '—', fmt(irM)],
+    ['Juin', fmt(carpM), '—', fmt(irM)],
+    ['Juillet (T2)', fmt(carpM + urssafT), fmt(urssafT), fmt(irM)],
+    ['Août', fmt(carpM), '—', fmt(irM)],
+    ['Septembre', fmt(carpM), '—', fmt(irM)],
+    ['Octobre (T3)', fmt(carpM + urssafT), fmt(urssafT), fmt(irM)],
+    ['Novembre', fmt(carpM), '—', '—'],
+    ['Décembre (T4)', fmt(carpM + urssafT), fmt(urssafT), '—'],
+  ];
+  document.getElementById('echeancier').innerHTML = `
+    <table style="width:100%;font-size:0.8rem;border-collapse:collapse">
+      <thead><tr style="background:var(--accent);color:white">
+        <th style="padding:6px 8px;text-align:left">Mois</th>
+        <th style="padding:6px 8px">CARPIMKO</th>
+        <th style="padding:6px 8px">URSSAF</th>
+        <th style="padding:6px 8px">Impôt</th>
+      </tr></thead>
+      <tbody>${echeances.map((r,i) => `<tr style="background:${i%2===0?'#fff':'#f0faf5'}">
+        <td style="padding:5px 8px;font-weight:${r[0].includes('T')?'700':'400'}">${r[0]}</td>
+        <td style="padding:5px 8px;text-align:right">${r[1]}</td>
+        <td style="padding:5px 8px;text-align:right;color:var(--warn)">${r[2]}</td>
+        <td style="padding:5px 8px;text-align:right;color:var(--accent)">${r[3]}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  `;
+}
+
+// ===== TESSERACT OCR SCANNER =====
+let ticketQueue = [];
+let currentTicketIndex = 0;
+
+function handleDrop(e) {
+  e.preventDefault();
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  if (files.length) startQueue(files);
+}
+
+function scanTickets(input) {
+  const files = Array.from(input.files);
+  if (files.length) startQueue(files);
+}
+
+function startQueue(files) {
+  ticketQueue = files;
+  currentTicketIndex = 0;
+  processNextTicket();
+}
+
+function processNextTicket() {
+  if (currentTicketIndex >= ticketQueue.length) return;
+  const file = ticketQueue[currentTicketIndex];
+  const preview = document.getElementById('scan_preview');
+  const status = document.getElementById('scan_status');
+  const result = document.getElementById('scan_result');
+  const counter = ticketQueue.length > 1 ? ' (' + (currentTicketIndex+1) + '/' + ticketQueue.length + ')' : '';
+  preview.style.display = 'flex';
+  result.style.display = 'none';
+  status.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);"><span class="loading-spin"></span> Lecture du ticket' + counter + '...</div>';
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('ticket_img').src = e.target.result;
+    runOCR(e.target.result, status, result, counter);
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runOCR(imageSrc, status, result, counter) {
+  try {
+    if (!window.Tesseract) {
+      status.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);"><span class="loading-spin"></span> Chargement OCR (1 fois)...</div>';
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    status.innerHTML = '<div style="display:flex;align-items:center;gap:8px;color:var(--muted);"><span class="loading-spin"></span> Analyse en cours' + (counter||'') + '...</div>';
+    const worker = await Tesseract.createWorker('fra');
+    const { data: { text } } = await worker.recognize(imageSrc);
+    await worker.terminate();
+    parseTicketText(text, status, result, counter);
+  } catch(e) {
+    status.innerHTML = '<div style="color:var(--danger);font-size:0.85rem;">❌ Erreur : ' + e.message + '<br><small>Saisissez manuellement ci-dessous.</small></div>';
+  }
+}
+
+function parseTicketText(text, status, result, counter) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Trouver le TOTAL — priorité aux lignes avec mots-clés
+  let montant = null;
+  const totalKeywords = /total|net\s*[àa]\s*payer|montant\s*d[uû]|vous\s*payez|[àa]\s*payer|esp[eè]ces?|cb|carte|r[eè]gl/i;
+  let bestTotalVal = 0;
+  for (const line of lines) {
+    if (totalKeywords.test(line)) {
+      const nums = [...line.matchAll(/(\d+[.,]\d{2})/g)].map(m => parseFloat(m[1].replace(',','.')));
+      const maxInLine = Math.max(...nums, 0);
+      if (maxInLine > bestTotalVal) { bestTotalVal = maxInLine; }
+    }
+  }
+  if (bestTotalVal > 0) montant = bestTotalVal;
+  // Fallback : plus grand montant du ticket
+  if (!montant) {
+    let max = 0;
+    const re = /(\d+[.,]\d{2})/g; let m;
+    while ((m = re.exec(text)) !== null) {
+      const v = parseFloat(m[1].replace(',', '.'));
+      if (v > max && v < 10000) max = v;
+    }
+    if (max > 0) montant = max;
+  }
+
+  // Trouver la TVA — méthode 1 : Total HT explicite (la plus fiable)
+  let tva = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (/total\s*ht\b/i.test(lines[i])) {
+      const nums = [...lines[i].matchAll(/(\d+[.,]\d{2})/g)].map(m => parseFloat(m[1].replace(',','.')));
+      // Cherche aussi ligne suivante si pas de montant sur cette ligne
+      let htVal = nums.length ? Math.max(...nums) : null;
+      if (!htVal && i+1 < lines.length) {
+        const n2 = [...lines[i+1].matchAll(/(\d+[.,]\d{2})/g)].map(m => parseFloat(m[1].replace(',','.')));
+        if (n2.length) htVal = Math.max(...n2);
+      }
+      if (htVal && montant && montant > htVal) {
+        tva = parseFloat((montant - htVal).toFixed(2));
+        break;
+      }
+    }
+  }
+  // Méthode 2 : ligne "Total TVA" (montant sur même ligne ou suivante)
+  if (!tva) {
+    for (let i = 0; i < lines.length; i++) {
+      if (/total\s*tva|tva\s*total/i.test(lines[i])) {
+        const nums = [...lines[i].matchAll(/(\d+[.,]\d{2})/g)].map(m => parseFloat(m[1].replace(',','.')));
+        const c = nums.filter(v => v < (montant||9999) && v > 0.01);
+        if (c.length) { tva = Math.min(...c); break; }
+        if (i+1 < lines.length) {
+          const n2 = [...lines[i+1].matchAll(/(\d+[.,]\d{2})/g)].map(m => parseFloat(m[1].replace(',','.')));
+          const c2 = n2.filter(v => v < (montant||9999) && v > 0.01);
+          if (c2.length) { tva = Math.min(...c2); break; }
+        }
+      }
+    }
+  }
+
+  // Date
+  let date = new Date().toISOString().split('T')[0];
+  const dm = text.match(/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (dm) {
+    const y = dm[3].length === 2 ? '20' + dm[3] : dm[3];
+    date = y + '-' + dm[2].padStart(2,'0') + '-' + dm[1].padStart(2,'0');
+  }
+
+  // Catégorie
+  const t = text.toLowerCase();
+  let cat = 'Autre', desc = '';
+  if (/pharmacie|médical|infirm|soin|seringue|gant|pans/.test(t)) { cat = 'Matériel médical'; desc = 'Fournitures médicales'; }
+  else if (/orange|sfr|bouygue|free|téléphone|mobile|internet/.test(t)) { cat = 'Téléphone / internet'; desc = 'Facture téléphone/internet'; }
+  else if (/formation|congrès|diplôme|ifsi/.test(t)) { cat = 'Formation continue'; desc = 'Formation'; }
+  else if (/assurance|macsf|maif|groupama/.test(t)) { cat = 'Assurance RCP'; desc = 'Assurance'; }
+  else if (/restaurant|brasserie|boulangerie|repas|déjeuner|diner|pizza|sandwi|snack|fast|traiteur|patisserie/.test(t)) { cat = 'Restauration (repas déplacement)'; desc = 'Repas en déplacement'; }
+  else if (/carburant|essence|sp95|gasoil|bp|shell|esso/.test(t)) { cat = 'Frais de déplacement'; desc = 'Carburant'; }
+  else if (/office|amazon|fnac|papeterie|bureau/.test(t)) { cat = 'Fournitures & consommables'; desc = 'Fournitures bureau'; }
+  else { desc = lines[0] || 'Divers'; }
+
+  // Remplir le formulaire
+  const ht = tva > 0 && montant ? montant - tva : montant;
+  document.getElementById('ai_date').value = date;
+  document.getElementById('ai_montant').value = montant ? montant.toFixed(2) : '';
+  document.getElementById('ai_tva').value = tva > 0 ? tva.toFixed(2) : '';
+  document.getElementById('ai_ht').value = ht ? ht.toFixed(2) : '';
+  const catSelect = document.getElementById('ai_cat');
+  for (let i = 0; i < catSelect.options.length; i++) {
+    if (catSelect.options[i].value === cat) { catSelect.selectedIndex = i; break; }
+  }
+  document.getElementById('ai_desc').value = desc;
+
+  const info = document.getElementById('ai_tva_info');
+  if (tva > 0 && montant) {
+    const pct = ((tva / (montant - tva)) * 100).toFixed(1);
+    info.innerHTML = '💡 HT <strong>' + (montant-tva).toFixed(2) + '€</strong> + TVA ' + pct + '% (<strong>' + tva.toFixed(2) + '€</strong>) = TTC <strong>' + montant.toFixed(2) + '€</strong><br>✅ En BNC vous déduisez le <strong>TTC complet</strong>.';
+  } else {
+    info.innerHTML = '💡 Pas de TVA détectée — TTC <strong>' + (montant||0).toFixed(2) + '€</strong> déductible en totalité.';
+  }
+
+  const hasNext = currentTicketIndex + 1 < ticketQueue.length;
+  const nextBtn = hasNext ? '<button class="btn btn-outline btn-sm" onclick="enregistrerEtSuivant()" style="margin-left:8px;">✅ Enregistrer et ticket suivant →</button>' : '';
+  status.innerHTML = montant
+    ? '<div style="color:var(--accent);font-size:0.85rem;font-weight:600;">✅ Ticket lu' + (counter||'') + ' ! Vérifiez et corrigez si besoin.' + nextBtn + '</div>'
+    : '<div style="color:var(--warn);font-size:0.85rem;">⚠️ Montant non détecté — saisissez manuellement.' + nextBtn + '</div>';
+  result.style.display = 'block';
+}
+
+function annulerScan() {
+  document.getElementById('scan_preview').style.display = 'none';
+  document.getElementById('ticket_input').value = '';
+  document.getElementById('scan_result').style.display = 'none';
+  document.getElementById('scan_status').innerHTML = '';
+}
+
+function enregistrerEtSuivant() {
+  validerScan(false);
+  currentTicketIndex++;
+  processNextTicket();
+}
+
+function validerScan(close = true) {
+  const date = document.getElementById('ai_date').value;
+  const montant = parseFloat(document.getElementById('ai_montant').value);
+  if (!date || !montant) { notify('⚠️ Vérifiez la date et le montant'); return; }
+  getYear().charges.push({
+    id: Date.now(), date, montant,
+    tva: parseFloat(document.getElementById('ai_tva').value) || 0,
+    ht: parseFloat(document.getElementById('ai_ht').value) || montant,
+    cat: document.getElementById('ai_cat').value,
+    desc: document.getElementById('ai_desc').value,
+    just: 'Oui'
+  });
+  saveData();
+  if (close !== false) {
+    document.getElementById('scan_preview').style.display = 'none';
+    document.getElementById('ticket_input').value = '';
+    ticketQueue = []; currentTicketIndex = 0;
+  }
+  notify('✅ Charge enregistrée !');
+  refreshCharges();
+  refreshDashboard();
+}
+
+// ===== INIT =====
+loadData();
+initDates();
+const savedKey = localStorage.getItem('mc_apikey');
+if (savedKey && document.getElementById('api_key')) document.getElementById('api_key').value = savedKey;
+refresh();
+</script>
+<!-- ===== CHATBOT ===== -->
+<div id="chat_bubble" onclick="toggleChat()" style="position:fixed;bottom:24px;right:24px;width:56px;height:56px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 20px rgba(45,106,79,0.4);z-index:9999;transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+  <span style="font-size:1.5rem;">💬</span>
+  <div id="chat_notif" style="display:none;position:absolute;top:-4px;right:-4px;background:#e63946;color:white;border-radius:50%;width:18px;height:18px;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;">1</div>
+</div>
+
+<div id="chat_window" style="display:none;position:fixed;bottom:90px;right:24px;width:340px;max-height:500px;background:white;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:9998;flex-direction:column;overflow:hidden;border:1px solid var(--border);">
+  <!-- Header -->
+  <div style="background:var(--accent);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🩺</div>
+      <div>
+        <div style="color:white;font-weight:700;font-size:0.95rem;">InfirmiPro Assistant</div>
+        <div style="color:rgba(255,255,255,0.8);font-size:0.72rem;">Comptabilité IDEL · Toujours disponible</div>
+      </div>
+    </div>
+    <button onclick="toggleChat()" style="background:none;border:none;color:white;font-size:1.3rem;cursor:pointer;opacity:0.8;">✕</button>
+  </div>
+
+  <!-- Messages -->
+  <div id="chat_messages" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:340px;">
+    <div class="chat-msg-bot">👋 Bonjour ! Je suis votre assistant comptable IDEL. Posez-moi vos questions sur la comptabilité, la déclaration 2035, les charges déductibles...</div>
+  </div>
+
+  <!-- Suggestions rapides -->
+  <div id="chat_suggestions" style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--border);">
+    <button class="chat-suggest" onclick="sendSuggest('Quelles charges puis-je déduire ?')">💰 Charges déductibles</button>
+    <button class="chat-suggest" onclick="sendSuggest('Comment fonctionne la déclaration 2035 ?')">📋 Déclaration 2035</button>
+    <button class="chat-suggest" onclick="sendSuggest('Comment calculer mes indemnités kilométriques ?')">🚗 Kilométrique</button>
+    <button class="chat-suggest" onclick="sendSuggest('Quelles sont mes cotisations URSSAF ?')">🏛️ URSSAF</button>
+  </div>
+
+  <!-- Input -->
+  <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;gap:8px;">
+    <input id="chat_input" type="text" placeholder="Votre question..." onkeydown="if(event.key==='Enter')sendChat()"
+      style="flex:1;border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:0.85rem;outline:none;font-family:'DM Sans',sans-serif;">
+    <button onclick="sendChat()" id="chat_send" style="background:var(--accent);color:white;border:none;border-radius:50%;width:36px;height:36px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">➤</button>
+  </div>
+</div>
+
+<style>
+.chat-msg-bot {
+  background:#f0faf5;
+  color:#1a1a2e;
+  padding:10px 14px;
+  border-radius:16px 16px 16px 4px;
+  font-size:0.84rem;
+  line-height:1.5;
+  max-width:90%;
+  align-self:flex-start;
+}
+.chat-msg-user {
+  background:var(--accent);
+  color:white;
+  padding:10px 14px;
+  border-radius:16px 16px 4px 16px;
+  font-size:0.84rem;
+  line-height:1.5;
+  max-width:85%;
+  align-self:flex-end;
+}
+.chat-suggest {
+  background:#f0faf5;
+  border:1px solid var(--accent2);
+  color:var(--accent);
+  border-radius:20px;
+  padding:4px 10px;
+  font-size:0.75rem;
+  cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  transition:background 0.15s;
+}
+.chat-suggest:hover { background:var(--accent2); color:white; }
+</style>
+
+<script>
+let chatOpen = false;
+let chatHistory = [];
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chat_window').style.display = chatOpen ? 'flex' : 'none';
+  if (chatOpen) document.getElementById('chat_input').focus();
+}
+
+function sendSuggest(text) {
+  document.getElementById('chat_suggestions').style.display = 'none';
+  document.getElementById('chat_input').value = text;
+  sendChat();
+}
+
+function addMsg(text, role) {
+  const msgs = document.getElementById('chat_messages');
+  const div = document.createElement('div');
+  div.className = role === 'user' ? 'chat-msg-user' : 'chat-msg-bot';
+  div.innerHTML = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat_input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addMsg(text, 'user');
+  chatHistory.push({ role: 'user', content: text });
+
+  const typing = addMsg('<span class="loading-spin"></span> ...', 'bot');
+
+  let apiKey = localStorage.getItem('openrouter_key');
+  if (!apiKey) {
+    apiKey = prompt('Entrez votre clé OpenRouter (sk-or-...) — sauvegardée localement :');
+    if (!apiKey) { typing.remove(); addMsg('Clé API requise.', 'bot'); return; }
+    localStorage.setItem('openrouter_key', apiKey);
+  }
+
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+        'HTTP-Referer': 'https://infirmipro.netlify.app',
+        'X-Title': 'InfirmiPro'
+      },
+      body: JSON.stringify({
+        model: 'qwen/qwen3-next-80b-a3b-instruct:free',
+        messages: [
+          { role: 'system', content: 'Tu es un assistant comptable expert pour infirmiers libéraux (IDEL) français en régime BNC. Réponds en 3-5 phrases max, directement, avec des chiffres concrets. Tutoiement chaleureux. Jamais de message d\'erreur.' },
+          ...chatHistory.slice(-6)
+        ],
+        max_tokens: 300
+      })
+    });
+    const data = await res.json();
+    typing.remove();
+    const reply = data?.choices?.[0]?.message?.content;
+    if (reply) {
+      addMsg(reply, 'bot');
+      chatHistory.push({ role: 'assistant', content: reply });
+    } else {
+      addMsg('⚠️ ' + JSON.stringify(data).slice(0, 200), 'bot');
+    }
+  } catch(e) {
+    typing.remove();
+    addMsg('❌ ' + e.message, 'bot');
+  }
+}
+</script>
+
+</body>
+</html>
